@@ -4,12 +4,12 @@
 //
 //  Created by Alexey Efimov on 28.03.2024.
 //
-
 import UIKit
 
 final class TaskListViewController: UITableViewController {
     private var taskList: [ToDoTask] = []
     private let cellID = "task"
+    private let storageManager = StorageManager.shared
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -19,46 +19,51 @@ final class TaskListViewController: UITableViewController {
         fetchData()
     }
     
+    // MARK: - Actions
     @objc private func addNewTask() {
         showAlert(withTitle: "New Task", andMessage: "What do you want to do?")
     }
     
     private func fetchData() {
-        let appDelegate = UIApplication.shared.delegate as! AppDelegate
-        let fetchRequest = ToDoTask.fetchRequest()
-        
-        do {
-            taskList = try appDelegate.persistentContainer.viewContext.fetch(fetchRequest)
-        } catch {
-            print(error)
-        }
+        taskList = storageManager.fetchTasks()
     }
     
-    private func showAlert(withTitle title: String, andMessage message: String) {
+    private func showAlert(withTitle title: String, andMessage message: String, taskToEdit: ToDoTask? = nil, at indexPath: IndexPath? = nil) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        
+        alert.addTextField { textField in
+            textField.placeholder = "Task"
+            textField.text = taskToEdit?.title
+        }
+        
         let okAction = UIAlertAction(title: "OK", style: .default) { [unowned self] _ in
             guard let inputText = alert.textFields?.first?.text, !inputText.isEmpty else { return }
-            save(inputText)
+            
+            if let task = taskToEdit, let indexPath = indexPath {
+                // Редактирование
+                task.title = inputText
+                storageManager.saveContext()
+                taskList[indexPath.row] = task
+                tableView.reloadRows(at: [indexPath], with: .automatic)
+            } else {
+                // Добавление новой задачи
+                save(inputText)
+            }
         }
+        
         let cancelAction = UIAlertAction(title: "Cancel", style: .destructive)
         alert.addAction(okAction)
         alert.addAction(cancelAction)
-        alert.addTextField { textField in
-            textField.placeholder = "New Task"
-        }
+        
         present(alert, animated: true)
     }
     
     private func save(_ taskName: String) {
-        let appDelegate = UIApplication.shared.delegate as! AppDelegate
-        let task = ToDoTask(context: appDelegate.persistentContainer.viewContext)
-        task.title = taskName
+        let task = storageManager.createTask(with: taskName)
         taskList.append(task)
         
         let indexPath = IndexPath(row: taskList.count - 1, section: 0)
         tableView.insertRows(at: [indexPath], with: .automatic)
-        
-        appDelegate.saveContext()
     }
 }
 
@@ -75,6 +80,35 @@ extension TaskListViewController {
         content.text = task.title
         cell.contentConfiguration = content
         return cell
+    }
+}
+extension TaskListViewController {
+    // 🔹 Тап по строке = редактирование
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let taskToEdit = taskList[indexPath.row]
+        showAlert(withTitle: "Edit Task",
+                  andMessage: "Update your task",
+                  taskToEdit: taskToEdit,
+                  at: indexPath)
+    }}
+// MARK: - UITableViewDelegate (swipe actions)
+extension TaskListViewController {
+    override func tableView(_ tableView: UITableView,
+                            trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        
+        // Удаление
+        let deleteAction = UIContextualAction(style: .destructive, title: "Удалить") { [unowned self] _, _, completion in
+            let taskToDelete = taskList[indexPath.row]
+            storageManager.deleteTask(taskToDelete)
+            taskList.remove(at: indexPath.row)
+            tableView.deleteRows(at: [indexPath], with: .automatic)
+            completion(true)
+        }
+        
+    
+        
+        return UISwipeActionsConfiguration(actions: [deleteAction])
     }
 }
 
