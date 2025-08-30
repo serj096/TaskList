@@ -40,13 +40,11 @@ final class TaskListViewController: UITableViewController {
             guard let inputText = alert.textFields?.first?.text, !inputText.isEmpty else { return }
             
             if let task = taskToEdit, let indexPath = indexPath {
-                // Редактирование
                 task.title = inputText
                 storageManager.saveContext()
                 taskList[indexPath.row] = task
                 tableView.reloadRows(at: [indexPath], with: .automatic)
             } else {
-                // Добавление новой задачи
                 save(inputText)
             }
         }
@@ -82,8 +80,9 @@ extension TaskListViewController {
         return cell
     }
 }
+
+// MARK: - UITableViewDelegate (tap to edit)
 extension TaskListViewController {
-    // 🔹 Тап по строке = редактирование
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let taskToEdit = taskList[indexPath.row]
         showAlert(withTitle: "Edit Task",
@@ -97,7 +96,6 @@ extension TaskListViewController {
                             trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
     ) -> UISwipeActionsConfiguration? {
         
-        // Удаление
         let deleteAction = UIContextualAction(style: .destructive, title: "Удалить") { [unowned self] _, _, completion in
             let taskToDelete = taskList[indexPath.row]
             storageManager.deleteTask(taskToDelete)
@@ -105,8 +103,6 @@ extension TaskListViewController {
             tableView.deleteRows(at: [indexPath], with: .automatic)
             completion(true)
         }
-        
-    
         
         return UISwipeActionsConfiguration(actions: [deleteAction])
     }
@@ -118,7 +114,6 @@ private extension TaskListViewController {
         title = "Task List"
         navigationController?.navigationBar.prefersLargeTitles = true
         
-        // Navigation bar appearance
         let navBarAppearance = UINavigationBarAppearance()
         
         navBarAppearance.backgroundColor = .milkBlue
@@ -129,7 +124,6 @@ private extension TaskListViewController {
         navigationController?.navigationBar.standardAppearance = navBarAppearance
         navigationController?.navigationBar.scrollEdgeAppearance = navBarAppearance
         
-        // Add button to navigation bar
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .add,
             target: self,

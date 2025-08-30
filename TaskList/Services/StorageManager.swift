@@ -41,7 +41,6 @@ final class StorageManager {
     
     // MARK: - CRUD Methods
     
-    /// Получить все задачи
     func fetchTasks() -> [ToDoTask] {
         let fetchRequest = ToDoTask.fetchRequest()
         do {
@@ -52,7 +51,6 @@ final class StorageManager {
         }
     }
     
-    /// Создать задачу
     @discardableResult
     func createTask(with title: String) -> ToDoTask {
         let task = ToDoTask(context: context)
@@ -61,13 +59,11 @@ final class StorageManager {
         return task
     }
     
-    /// Удалить задачу
     func deleteTask(_ task: ToDoTask) {
         context.delete(task)
         saveContext()
     }
     
-    /// Обновить задачу
     func updateTask(_ task: ToDoTask, newTitle: String) {
         task.title = newTitle
         saveContext()
